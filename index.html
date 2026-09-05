@@ -90,10 +90,13 @@
   #crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(233,230,220,0.85);}
   #crosshair::before{left:9px;top:0;width:2px;height:20px;}
   #crosshair::after{top:9px;left:0;height:2px;width:20px;}
+  #crosshair.circle{width:36px;height:36px;left:50%;top:50%;border:2px solid rgba(233,230,220,0.85);border-radius:50%;background:transparent;box-sizing:border-box;}
+  #crosshair.circle::before,#crosshair.circle::after{display:none;}
   .hud-bl{position:absolute;left:22px;bottom:22px;width:230px;}
   .hp-label{font-size:11px;color:var(--ink-dim);letter-spacing:.08em;margin-bottom:5px;}
   .hp-bar{height:10px;background:#2a2f26;border:1px solid var(--line);}
   .hp-fill{height:100%;background:var(--good);width:100%;transition:width .2s;}
+  .shield-fill{height:100%;background:#4c9fe0;width:100%;transition:width .2s;}
   .hud-br{position:absolute;right:22px;bottom:22px;text-align:right;}
   .weapon-name{font-family:'Oswald',sans-serif;font-size:20px;letter-spacing:.03em;}
   .weapon-hint{font-size:11.5px;color:var(--ink-dim);margin-top:2px;}
@@ -166,12 +169,15 @@
 <div id="hud" class="hidden">
   <div id="crosshair"></div>
   <div class="hud-bl">
-    <div class="hp-label">HEALTH</div>
+    <div class="hp-label">SHIELD</div>
+    <div class="hp-bar"><div class="shield-fill" id="shieldFill"></div></div>
+    <div class="hp-label" style="margin-top:8px;">HEALTH</div>
     <div class="hp-bar"><div class="hp-fill" id="hpFill"></div></div>
   </div>
   <div class="hud-br">
     <div class="weapon-name" id="weaponName">SNIPER RIFLE</div>
     <div class="weapon-hint" id="weaponHint">1/2/3 switch &middot; LMB fire &middot; RMB aim &middot; Space jump &middot; Shift sprint</div>
+    <div class="weapon-hint" id="ammoLine" style="margin-top:4px;"></div>
   </div>
   <div class="hud-top">
     <div class="score-line">YOU <span id="scoreYou">0</span> &nbsp;&mdash;&nbsp; <span id="scoreThem">0</span> <span id="oppLabel">BOT</span></div>
@@ -214,7 +220,7 @@ function loadModel(key){
 const WEAPON_DEFS = [
   { key:'sniper',  name:'SNIPER RIFLE', dmg:92, rate:1.35, pellets:1, spread:0.0015, adsSpread:0.0002, viewScale:1.0, viewPos:[0.32,-0.32,-0.75], adsViewPos:[0,-0.20,-0.42], viewRot:[0,Math.PI*0.5,0] },
   { key:'shotgun', name:'SHOTGUN',      dmg:16, rate:0.85, pellets:9, spread:0.10,   adsSpread:0.05,   viewScale:1.0, viewPos:[0.32,-0.34,-0.62], adsViewPos:[0,-0.21,-0.40], viewRot:[0,Math.PI*0.5,0] },
-  { key:'mpsd',    name:'MPSD',         dmg:11, rate:0.11, pellets:1, spread:0.028,  adsSpread:0.006,  viewScale:1.0, viewPos:[0.30,-0.30,-0.55], adsViewPos:[0,-0.19,-0.38], viewRot:[0,0,0] },
+  { key:'mpsd',    name:'MPSD',         dmg:9,  rate:0.11, pellets:1, spread:0.028,  adsSpread:0.006,  viewScale:1.0, viewPos:[0.30,-0.30,-0.55], adsViewPos:[0,-0.19,-0.38], viewRot:[0,0,0], auto:true, magSize:20, reloadTime:1.6 },
 ];
 const HIP_FOV = 72;
 const ADS_FOV = 46;
@@ -337,6 +343,24 @@ async function loadAllAssets(setProgress){
    ============================================================ */
 let currentWeaponIndex = 0;
 let weaponViewNode = null;
+let weaponAmmo = {};
+let isReloading = false;
+let reloadTimer = 0;
+let isLMBDown = false;
+
+function updateAmmoUI(){
+  const def = WEAPON_DEFS[currentWeaponIndex];
+  const el = document.getElementById('ammoLine');
+  if(!def.magSize){ el.textContent = ''; return; }
+  if(isReloading){ el.textContent = 'RELOADING\u2026'; return; }
+  el.textContent = (weaponAmmo[def.key] ?? def.magSize) + ' / ' + def.magSize;
+}
+function startReload(def){
+  if(!def.magSize) return;
+  isReloading = true;
+  reloadTimer = def.reloadTime || 1.5;
+  updateAmmoUI();
+}
 function equipWeapon(index){
   currentWeaponIndex = index;
   const def = WEAPON_DEFS[index];
@@ -348,6 +372,11 @@ function equipWeapon(index){
   weaponViewNode.traverse(n => { if(n.isMesh){ n.castShadow=false; n.receiveShadow=false; } });
   camera.add(weaponViewNode);
   document.getElementById('weaponName').textContent = def.name;
+  document.getElementById('crosshair').classList.toggle('circle', def.key==='shotgun');
+  if(def.magSize && !(def.key in weaponAmmo)) weaponAmmo[def.key] = def.magSize;
+  isReloading = false;
+  reloadTimer = 0;
+  updateAmmoUI();
   lastFireTime = -999;
 }
 let lastFireTime = -999;
@@ -375,11 +404,22 @@ class Opponent {
       this.action = this.mixer.clipAction(clip);
       this.action.play();
     }
+    this.shield = 100;
     this.health = 100;
     this.pos = new THREE.Vector3();
     this.yaw = 0;
     this.targetPos = new THREE.Vector3();
     this.targetYaw = 0;
+    this.hopY = 0;
+  }
+  applyDamage(dmg){
+    if(this.shield>0){
+      const absorbed = Math.min(this.shield, dmg);
+      this.shield -= absorbed;
+      dmg -= absorbed;
+    }
+    if(dmg>0) this.health = Math.max(0, this.health - dmg);
+    return this.health<=0;
   }
   setPose(pos, yaw){
     this.targetPos.copy(pos);
@@ -388,7 +428,7 @@ class Opponent {
   update(dt){
     this.pos.lerp(this.targetPos, Math.min(1, dt*10));
     this.root.position.copy(this.pos);
-    this.root.position.y = 0;
+    this.root.position.y = this.hopY || 0;
     let dy = this.targetYaw - this.yaw;
     while(dy>Math.PI) dy-=Math.PI*2; while(dy<-Math.PI) dy+=Math.PI*2;
     this.yaw += dy*Math.min(1,dt*10);
@@ -437,10 +477,14 @@ window.addEventListener('mousemove', e => {
 });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('mousedown', e => {
-  if(e.button===0 && pointerLocked && gameActive) tryFire();
+  if(e.button===0 && pointerLocked && gameActive){
+    isLMBDown = true;
+    tryFire();
+  }
   if(e.button===2 && pointerLocked && gameActive) isAiming = true;
 });
 window.addEventListener('mouseup', e => {
+  if(e.button===0) isLMBDown = false;
   if(e.button===2) isAiming = false;
 });
 
@@ -450,6 +494,7 @@ window.addEventListener('mouseup', e => {
 let gameActive = false;
 let gameMode = null; // 'quickplay' | 'online'
 let playerHealth = 100;
+let playerShield = 100;
 let scoreYou = 0, scoreThem = 0;
 let roundFrozen = false;
 let opponent = null;
@@ -475,10 +520,23 @@ function resetPlayer(pos){
   grounded = true;
   isAiming = false;
   playerHealth = 100;
+  playerShield = 100;
   updateHpUI();
 }
 
+function applyDamageToPlayer(dmg){
+  if(playerShield>0){
+    const absorbed = Math.min(playerShield, dmg);
+    playerShield -= absorbed;
+    dmg -= absorbed;
+  }
+  if(dmg>0) playerHealth = Math.max(0, playerHealth - dmg);
+  updateHpUI();
+  return playerHealth<=0;
+}
+
 function updateHpUI(){
+  document.getElementById('shieldFill').style.width = Math.max(0,playerShield) + '%';
   document.getElementById('hpFill').style.width = Math.max(0,playerHealth) + '%';
   document.getElementById('hpFill').style.background = playerHealth>50 ? 'var(--good)' : (playerHealth>20?'#c98a3a':'var(--bad)');
 }
@@ -550,6 +608,8 @@ function updateMovement(dt){
 /* ---------- firing ---------- */
 function tryFire(){
   const def = WEAPON_DEFS[currentWeaponIndex];
+  if(isReloading) return;
+  if(def.magSize && (weaponAmmo[def.key] ?? def.magSize) <= 0){ startReload(def); return; }
   const now = performance.now()/1000;
   if(now - lastFireTime < def.rate) return;
   lastFireTime = now;
@@ -560,14 +620,19 @@ function tryFire(){
   const spread = isAiming ? def.adsSpread : def.spread;
   const muzzleOrigin = weaponViewNode ? weaponViewNode.getWorldPosition(new THREE.Vector3()) : camera.getWorldPosition(new THREE.Vector3());
   const camOrigin = camera.getWorldPosition(new THREE.Vector3());
+  const camQuat = camera.getWorldQuaternion(new THREE.Quaternion());
+  const baseDir = new THREE.Vector3(0,0,-1).applyQuaternion(camQuat);
+  const rightVec = new THREE.Vector3(1,0,0).applyQuaternion(camQuat);
+  const upVec = new THREE.Vector3(0,1,0).applyQuaternion(camQuat);
   const box = opponent ? opponent.hitBox() : null;
   let hits = 0;
   for(let i=0;i<def.pellets;i++){
-    const dir = new THREE.Vector3(0,0,-1).applyQuaternion(camera.getWorldQuaternion(new THREE.Quaternion()));
-    dir.x += (Math.random()-0.5)*spread;
-    dir.y += (Math.random()-0.5)*spread;
-    dir.z += (Math.random()-0.5)*spread;
-    dir.normalize();
+    const theta = Math.random()*Math.PI*2;
+    const r = spread * Math.sqrt(Math.random());
+    const dir = baseDir.clone()
+      .add(rightVec.clone().multiplyScalar(Math.cos(theta)*r))
+      .add(upVec.clone().multiplyScalar(Math.sin(theta)*r))
+      .normalize();
     let hitPoint = null;
     if(box){
       const ray = new THREE.Ray(camOrigin, dir);
@@ -580,11 +645,15 @@ function tryFire(){
       spawnTracer(muzzleOrigin, tracerDir, muzzleOrigin.distanceTo(far));
     }
   }
+  if(def.magSize){
+    weaponAmmo[def.key] = (weaponAmmo[def.key] ?? def.magSize) - 1;
+    updateAmmoUI();
+    if(weaponAmmo[def.key] <= 0) startReload(def);
+  }
   if(hits>0 && opponent){
     const dmg = def.dmg * hits;
     if(gameMode==='quickplay'){
-      opponent.health = Math.max(0, opponent.health - dmg);
-      if(opponent.health<=0) onOpponentKilled();
+      if(opponent.applyDamage(dmg)) onOpponentKilled();
     } else if(gameMode==='online'){
       sendNet({t:'hit', d:dmg});
     }
@@ -610,7 +679,7 @@ function onPlayerKilled(){
 function startRound(){
   roundFrozen = false;
   resetPlayer(SPAWN_A);
-  if(opponent){ opponent.health = 100; opponent.setPose(SPAWN_B, Math.PI); opponent.pos.copy(SPAWN_B); }
+  if(opponent){ opponent.health = 100; opponent.shield = 100; opponent.hopY = 0; opponent.setPose(SPAWN_B, Math.PI); opponent.pos.copy(SPAWN_B); }
   if(gameMode==='online') sendNet({t:'roundready'});
 }
 function endMatch(won){
@@ -653,6 +722,10 @@ function updateTracers(dt){
 let botFireCooldown = 0;
 let botStrafeDir = 1;
 let botStrafeT = 0;
+let botSprinting = true;
+let botVelocityY = 0;
+let botGrounded = true;
+let botJumpTimer = 1.5;
 function updateBot(dt){
   if(!opponent || roundFrozen) return;
   const toPlayer = new THREE.Vector3().subVectors(yawObject.position, opponent.pos);
@@ -660,16 +733,31 @@ function updateBot(dt){
   const dist = toPlayer.length();
   const dir = toPlayer.clone().normalize();
   botStrafeT += dt;
-  if(botStrafeT>2.2){ botStrafeT=0; botStrafeDir*=-1; }
+  if(botStrafeT>2.2){ botStrafeT=0; botStrafeDir*=-1; botSprinting = Math.random()<0.75; }
   const strafe = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(botStrafeDir);
   const move = new THREE.Vector3();
   if(dist>9) move.add(dir);
   else if(dist<4) move.sub(dir);
   move.add(strafe.multiplyScalar(0.6));
-  if(move.lengthSq()>0) move.normalize().multiplyScalar(5.6*dt);
+  const botSpeed = botSprinting ? 8.4 : 5.2; // matches the player's sprint / walk speed
+  if(move.lengthSq()>0) move.normalize().multiplyScalar(botSpeed*dt);
   const next = opponent.pos.clone().add(move);
   resolveCollision(next, 0.5);
   opponent.setPose(next, Math.atan2(-dir.x, -dir.z));
+
+  botJumpTimer -= dt;
+  if(botJumpTimer<=0){
+    botJumpTimer = 1.2 + Math.random()*2.2;
+    if(botGrounded && Math.random()<0.55){
+      botVelocityY = JUMP_SPEED;
+      botGrounded = false;
+    }
+  }
+  if(!botGrounded || opponent.hopY>0){
+    botVelocityY += GRAVITY*dt;
+    opponent.hopY = Math.max(0, opponent.hopY + botVelocityY*dt);
+    if(opponent.hopY<=0){ opponent.hopY = 0; botVelocityY = 0; botGrounded = true; }
+  }
 
   botFireCooldown -= dt;
   if(botFireCooldown<=0 && dist<16){
@@ -683,9 +771,7 @@ function updateBot(dt){
     spawnTracer(muzzle, aimDir, dist+2);
     if(Math.random() > missChance){
       const dmg = 8 + Math.random()*10;
-      playerHealth = Math.max(0, playerHealth-dmg);
-      updateHpUI();
-      if(playerHealth<=0) onPlayerKilled();
+      if(applyDamageToPlayer(dmg)) onPlayerKilled();
     }
   }
 }
@@ -731,9 +817,7 @@ function handleNetMessage(msg){
     opponent.setPose(new THREE.Vector3(msg.x,0,msg.z), msg.ry);
   } else if(msg.t==='hit'){
     if(roundFrozen) return;
-    playerHealth = Math.max(0, playerHealth - msg.d);
-    updateHpUI();
-    if(playerHealth<=0){ sendNet({t:'died'}); onPlayerKilled(); }
+    if(applyDamageToPlayer(msg.d)){ sendNet({t:'died'}); onPlayerKilled(); }
   } else if(msg.t==='died'){
     onOpponentKilled();
   } else if(msg.t==='roundready'){
@@ -937,6 +1021,15 @@ function animate(){
     updateTracers(dt);
 
     const def = WEAPON_DEFS[currentWeaponIndex];
+    if(isLMBDown && pointerLocked && def.auto && !roundFrozen) tryFire();
+    if(isReloading){
+      reloadTimer -= dt;
+      if(reloadTimer<=0){
+        isReloading = false;
+        weaponAmmo[def.key] = def.magSize;
+        updateAmmoUI();
+      }
+    }
     const targetFov = isAiming ? ADS_FOV : HIP_FOV;
     if(Math.abs(currentFov-targetFov) > 0.05){
       currentFov += (targetFov-currentFov)*Math.min(1, dt*12);
