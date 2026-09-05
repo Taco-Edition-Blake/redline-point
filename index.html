@@ -762,10 +762,10 @@ function updateBot(dt){
   botFireCooldown -= dt;
   if(botFireCooldown<=0 && dist<16){
     botFireCooldown = 0.55 + Math.random()*0.5;
-    const missChance = Math.min(0.7, dist/26);
+    const missChance = Math.min(0.8, 0.32 + dist/24);
     const aimDir = dir.clone();
-    aimDir.x += (Math.random()-0.5)*0.06;
-    aimDir.z += (Math.random()-0.5)*0.06;
+    aimDir.x += (Math.random()-0.5)*0.14;
+    aimDir.z += (Math.random()-0.5)*0.14;
     aimDir.normalize();
     const muzzle = opponent.gunNode ? opponent.gunNode.getWorldPosition(new THREE.Vector3()) : opponent.pos.clone();
     spawnTracer(muzzle, aimDir, dist+2);
