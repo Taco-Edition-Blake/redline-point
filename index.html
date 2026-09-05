@@ -93,7 +93,8 @@
   #crosshair.circle{width:36px;height:36px;left:50%;top:50%;border:2px solid rgba(233,230,220,0.85);border-radius:50%;background:transparent;box-sizing:border-box;}
   #crosshair.circle::before,#crosshair.circle::after{display:none;}
   .hud-bl{position:absolute;left:22px;bottom:22px;width:230px;}
-  .hp-label{font-size:11px;color:var(--ink-dim);letter-spacing:.08em;margin-bottom:5px;}
+  .hp-label{font-size:11px;color:var(--ink-dim);letter-spacing:.08em;margin-bottom:5px;display:flex;justify-content:space-between;}
+  .hp-label b{color:var(--ink);font-weight:600;letter-spacing:0;font-size:12px;}
   .hp-bar{height:10px;background:#2a2f26;border:1px solid var(--line);}
   .hp-fill{height:100%;background:var(--good);width:100%;transition:width .2s;}
   .shield-fill{height:100%;background:#4c9fe0;width:100%;transition:width .2s;}
@@ -115,6 +116,18 @@
   #clickToPlay{position:fixed;inset:0;z-index:15;display:flex;align-items:center;justify-content:center;background:rgba(10,12,9,0.55);cursor:pointer;}
   #clickToPlay div{font-family:'Oswald',sans-serif;font-size:22px;letter-spacing:.04em;background:rgba(20,22,18,0.85);padding:16px 30px;border:1px solid var(--line);}
 
+  #scopeOverlay{position:fixed;inset:0;z-index:12;display:none;}
+  #scopeOverlay.active{display:block;}
+  .scope-hole{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:64vmin;height:64vmin;border-radius:50%;box-shadow:0 0 0 9999px #000;}
+  .scope-hole::before,.scope-hole::after{content:'';position:absolute;background:rgba(10,12,9,0.9);}
+  .scope-hole::before{left:50%;top:0;width:2px;height:100%;transform:translateX(-50%);}
+  .scope-hole::after{top:50%;left:0;height:2px;width:100%;transform:translateY(-50%);}
+  .scope-ring{position:absolute;inset:6%;border:2px solid rgba(10,12,9,0.85);border-radius:50%;}
+  .scope-tick{position:absolute;background:rgba(10,12,9,0.85);}
+  #redDot{position:fixed;top:50%;left:50%;width:8px;height:8px;transform:translate(-50%,-50%);border-radius:50%;background:#ff3b30;box-shadow:0 0 6px 2px rgba(255,59,48,0.65);z-index:12;display:none;}
+  #redDot.active{display:block;}
+  #dmgNumbers{position:fixed;inset:0;z-index:14;pointer-events:none;overflow:hidden;}
+  .dmg-number{position:absolute;transform:translate(-50%,-50%);opacity:1;transition:transform .8s ease-out, opacity .8s ease-out;font-family:'Oswald',sans-serif;font-weight:700;font-size:22px;color:#ffcf4d;text-shadow:0 2px 6px rgba(0,0,0,.7);white-space:nowrap;}
   @media (max-width:560px){
     .brand h1{font-size:52px;}
     .menu-btn{font-size:16px;padding:14px 18px;}
@@ -163,15 +176,22 @@
 </div>
 
 <div id="clickToPlay" class="hidden"><div>CLICK TO ENTER THE ARENA</div></div>
+<div id="dmgNumbers"></div>
 
 <canvas id="gameCanvas"></canvas>
 
 <div id="hud" class="hidden">
   <div id="crosshair"></div>
+  <div id="redDot"></div>
+  <div id="scopeOverlay">
+    <div class="scope-hole">
+      <div class="scope-ring"></div>
+    </div>
+  </div>
   <div class="hud-bl">
-    <div class="hp-label">SHIELD</div>
+    <div class="hp-label">SHIELD <b id="shieldNumber">100</b></div>
     <div class="hp-bar"><div class="shield-fill" id="shieldFill"></div></div>
-    <div class="hp-label" style="margin-top:8px;">HEALTH</div>
+    <div class="hp-label" style="margin-top:8px;">HEALTH <b id="hpNumber">100</b></div>
     <div class="hp-bar"><div class="hp-fill" id="hpFill"></div></div>
   </div>
   <div class="hud-br">
@@ -218,9 +238,9 @@ function loadModel(key){
    WEAPON DEFINITIONS
    ============================================================ */
 const WEAPON_DEFS = [
-  { key:'sniper',  name:'SNIPER RIFLE', dmg:92, rate:1.35, pellets:1, spread:0.0015, adsSpread:0.0002, viewScale:1.0, viewPos:[0.32,-0.32,-0.75], adsViewPos:[0,-0.20,-0.42], viewRot:[0,Math.PI*0.5,0] },
-  { key:'shotgun', name:'SHOTGUN',      dmg:16, rate:0.85, pellets:9, spread:0.10,   adsSpread:0.05,   viewScale:1.0, viewPos:[0.32,-0.34,-0.62], adsViewPos:[0,-0.21,-0.40], viewRot:[0,Math.PI*0.5,0] },
-  { key:'mpsd',    name:'MPSD',         dmg:9,  rate:0.11, pellets:1, spread:0.028,  adsSpread:0.006,  viewScale:1.0, viewPos:[0.30,-0.30,-0.55], adsViewPos:[0,-0.19,-0.38], viewRot:[0,0,0], auto:true, magSize:20, reloadTime:1.6 },
+  { key:'sniper',  name:'SNIPER RIFLE', dmg:92, rate:1.35, pellets:1, spread:0.0015, adsSpread:0.0001, viewScale:1.0, viewPos:[0.32,-0.32,-0.75], adsViewPos:[0,-0.20,-0.42], viewRot:[0,Math.PI*0.5,0], adsFov:12, scopeType:'scope' },
+  { key:'shotgun', name:'SHOTGUN',      dmg:16, rate:0.85, pellets:9, spread:0.10,   adsSpread:0.05,   viewScale:1.0, viewPos:[0.32,-0.34,-0.62], adsViewPos:[0,-0.21,-0.40], viewRot:[0,Math.PI*0.5,0], adsFov:46, scopeType:'none' },
+  { key:'mpsd',    name:'MPSD',         dmg:9,  rate:0.11, pellets:1, spread:0.028,  adsSpread:0.006,  viewScale:1.0, viewPos:[0.30,-0.30,-0.55], adsViewPos:[0,-0.19,-0.38], viewRot:[0,0,0], auto:true, magSize:20, reloadTime:1.6, adsFov:62.6, scopeType:'reddot' },
 ];
 const HIP_FOV = 72;
 const ADS_FOV = 46;
@@ -539,6 +559,8 @@ function updateHpUI(){
   document.getElementById('shieldFill').style.width = Math.max(0,playerShield) + '%';
   document.getElementById('hpFill').style.width = Math.max(0,playerHealth) + '%';
   document.getElementById('hpFill').style.background = playerHealth>50 ? 'var(--good)' : (playerHealth>20?'#c98a3a':'var(--bad)');
+  document.getElementById('shieldNumber').textContent = Math.max(0, Math.round(playerShield));
+  document.getElementById('hpNumber').textContent = Math.max(0, Math.round(playerHealth));
 }
 function updateScoreUI(){
   document.getElementById('scoreYou').textContent = scoreYou;
@@ -626,6 +648,7 @@ function tryFire(){
   const upVec = new THREE.Vector3(0,1,0).applyQuaternion(camQuat);
   const box = opponent ? opponent.hitBox() : null;
   let hits = 0;
+  let firstHitPoint = null;
   for(let i=0;i<def.pellets;i++){
     const theta = Math.random()*Math.PI*2;
     const r = spread * Math.sqrt(Math.random());
@@ -637,7 +660,7 @@ function tryFire(){
     if(box){
       const ray = new THREE.Ray(camOrigin, dir);
       const target = new THREE.Vector3();
-      if(ray.intersectBox(box, target)){ hits++; hitPoint = target; }
+      if(ray.intersectBox(box, target)){ hits++; hitPoint = target; if(!firstHitPoint) firstHitPoint = target.clone(); }
     }
     if(i<3){
       const far = hitPoint || camOrigin.clone().add(dir.clone().multiplyScalar(40));
@@ -652,6 +675,7 @@ function tryFire(){
   }
   if(hits>0 && opponent){
     const dmg = def.dmg * hits;
+    if(firstHitPoint) spawnDamageNumber(firstHitPoint, dmg);
     if(gameMode==='quickplay'){
       if(opponent.applyDamage(dmg)) onOpponentKilled();
     } else if(gameMode==='online'){
@@ -786,6 +810,22 @@ let netPollInterval = null;
 let myLobbyKey = null;
 let lastSentState = 0;
 
+function spawnDamageNumber(worldPos, amount){
+  const vec = worldPos.clone().project(camera);
+  const x = (vec.x*0.5+0.5)*window.innerWidth;
+  const y = (-(vec.y*0.5)+0.5)*window.innerHeight;
+  const el = document.createElement('div');
+  el.className = 'dmg-number';
+  el.textContent = '-' + Math.max(1, Math.round(amount));
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  document.getElementById('dmgNumbers').appendChild(el);
+  requestAnimationFrame(() => {
+    el.style.transform = 'translate(-50%,-160%)';
+    el.style.opacity = '0';
+  });
+  setTimeout(() => el.remove(), 850);
+}
 function log(...a){ console.log('[net]', ...a); }
 
 async function waitIceComplete(pc, timeoutMs=4000){
@@ -1030,7 +1070,7 @@ function animate(){
         updateAmmoUI();
       }
     }
-    const targetFov = isAiming ? ADS_FOV : HIP_FOV;
+    const targetFov = isAiming ? (def.adsFov ?? ADS_FOV) : HIP_FOV;
     if(Math.abs(currentFov-targetFov) > 0.05){
       currentFov += (targetFov-currentFov)*Math.min(1, dt*12);
       camera.fov = currentFov;
@@ -1040,8 +1080,13 @@ function animate(){
       const targetPos = isAiming ? def.adsViewPos : def.viewPos;
       weaponViewNode.position.x += (targetPos[0]-weaponViewNode.position.x)*Math.min(1,dt*14);
       weaponViewNode.position.y += (targetPos[1]-weaponViewNode.position.y)*Math.min(1,dt*14);
+      weaponViewNode.visible = !(isAiming && def.scopeType==='scope');
     }
-    document.getElementById('crosshair').style.opacity = isAiming ? '0' : '1';
+    const scoping = isAiming && def.scopeType==='scope';
+    const reddotting = isAiming && def.scopeType==='reddot';
+    document.getElementById('crosshair').style.opacity = (isAiming) ? '0' : '1';
+    document.getElementById('scopeOverlay').classList.toggle('active', scoping);
+    document.getElementById('redDot').classList.toggle('active', reddotting);
 
     if(gameMode==='online'){
       lastSentState -= dt;
