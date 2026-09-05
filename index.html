@@ -86,6 +86,34 @@
   #clickToPlay{position:fixed;inset:0;z-index:15;display:flex;align-items:center;justify-content:center;background:rgba(10,12,9,.55);cursor:pointer;}
   #clickToPlay div{font-family:'Oswald',sans-serif;font-size:22px;letter-spacing:.04em;background:rgba(20,22,18,.85);padding:16px 30px;border:1px solid var(--line);}
 
+  .level-badge{display:inline-block;margin-top:10px;font-size:12px;letter-spacing:.08em;color:var(--ink-dim);
+    border:1px solid var(--line);padding:5px 12px;background:var(--panel);}
+  .level-badge b{color:var(--safety);}
+
+  #battlePassPanel{position:fixed;inset:0;z-index:25;display:flex;flex-direction:column;align-items:center;
+    background:rgba(10,12,9,.96);padding:40px 20px;overflow-y:auto;}
+  #battlePassPanel h2{font-family:'Oswald',sans-serif;font-size:30px;letter-spacing:.04em;margin:0 0 4px;}
+  .bp-sub{color:var(--ink-dim);font-size:13px;margin-bottom:22px;}
+  .bp-stats{display:flex;gap:28px;margin-bottom:18px;flex-wrap:wrap;justify-content:center;}
+  .bp-stat{text-align:center;}
+  .bp-stat .num{font-family:'Oswald',sans-serif;font-size:26px;color:var(--safety);}
+  .bp-stat .lbl{font-size:11px;color:var(--ink-dim);letter-spacing:.08em;}
+  .bp-xp-wrap{width:min(520px,90vw);margin-bottom:26px;}
+  .bp-xp-bar{height:12px;background:#2a2f26;border:1px solid var(--line);}
+  .bp-xp-fill{height:100%;background:var(--safety);width:0%;transition:width .3s;}
+  .bp-xp-text{font-size:11px;color:var(--ink-dim);margin-top:6px;text-align:center;}
+  .bp-tiers{width:min(560px,92vw);display:flex;flex-direction:column;gap:6px;margin-bottom:24px;}
+  .bp-tier{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border:1px solid var(--line);
+    background:var(--panel);font-size:13px;}
+  .bp-tier.locked{opacity:.4;}
+  .bp-tier.current{border-color:var(--safety);}
+  .bp-tier .tnum{font-family:'Oswald',sans-serif;color:var(--ink-dim);width:44px;flex:none;}
+  .bp-tier .treward{flex:1;text-align:left;padding-left:8px;}
+  .bp-tier .tstate{font-size:11px;color:var(--ink-dim);}
+  .bp-tier.current .tstate{color:var(--safety);}
+  #bpCloseBtn{padding:11px 30px;background:transparent;border:1px solid var(--line);color:var(--ink-dim);font-size:13.5px;cursor:pointer;}
+  #bpCloseBtn:hover{border-color:var(--safety);color:var(--ink);}
+
   @media (max-width:560px){.brand h1{font-size:52px;} .menu-btn{font-size:16px;padding:14px 18px;}}
 </style>
 </head>
@@ -104,14 +132,31 @@
   <div class="brand">
     <p class="eyebrow">FIELD OPS &mdash; 1V1 ARENA</p>
     <h1>REDLINE<span>&middot;</span>POINT</h1>
-    <p class="tag">Small arena. Three guns. One winner. Pick a mode.</p>
+    <p class="tag">Small arena. Seven guns. One winner. Pick a mode.</p>
+    <div class="level-badge" id="menuLevelBadge">LEVEL <b>1</b> &middot; 0 GOLD</div>
   </div>
   <div class="menu-buttons">
     <button class="menu-btn" id="quickplayBtn"><span>QUICKPLAY<span class="sub">1v1 against a bot, right now</span></span><span class="arrow">&#8594;</span></button>
     <button class="menu-btn" id="onlineBtn"><span>ONLINE<span class="sub">Matched against another real player</span></span><span class="arrow">&#8594;</span></button>
+    <button class="menu-btn" id="battlePassBtn"><span>BATTLE PASS<span class="sub">100 tiers &middot; unlock every gun</span></span><span class="arrow">&#8594;</span></button>
     <button class="menu-btn" id="exitBtn"><span>EXIT<span class="sub">Close the app</span></span><span class="arrow">&#8594;</span></button>
   </div>
-  <p class="credits">Models: Sniper Rifle, Shotgun &amp; SWAT by Quaternius &middot; MPSD by austincford &middot; Soldier by madtrollstudio</p>
+  <p class="credits">Models: Quaternius, austincford, madtrollstudio, Zsky, Kristian M, Jex Merrill</p>
+</div>
+
+<div id="battlePassPanel" class="hidden">
+  <h2>BATTLE PASS</h2>
+  <p class="bp-sub">Play matches to earn XP. Every level grants a Gun Crate &mdash; every 20th level guarantees a new weapon.</p>
+  <div class="bp-stats">
+    <div class="bp-stat"><div class="num" id="bpLevelNum">1</div><div class="lbl">LEVEL</div></div>
+    <div class="bp-stat"><div class="num" id="bpGoldNum">0</div><div class="lbl">GOLD</div></div>
+  </div>
+  <div class="bp-xp-wrap">
+    <div class="bp-xp-bar"><div class="bp-xp-fill" id="bpXpFill"></div></div>
+    <div class="bp-xp-text" id="bpXpText">0 / 1500 XP to next level</div>
+  </div>
+  <div class="bp-tiers" id="bpTierList"></div>
+  <button id="bpCloseBtn">BACK</button>
 </div>
 
 <div id="searchPanel" class="hidden">
@@ -137,7 +182,7 @@
   </div>
   <div class="hud-br">
     <div class="weapon-name" id="weaponName">SNIPER RIFLE</div>
-    <div class="weapon-hint" id="weaponHint">1/2/3 switch &middot; LMB fire &middot; RMB aim &middot; Space jump &middot; Shift sprint</div>
+    <div class="weapon-hint" id="weaponHint">1-7 switch &middot; R reload &middot; LMB fire &middot; RMB aim &middot; Space jump &middot; Shift sprint</div>
     <div class="weapon-hint" id="ammoLine" style="margin-top:4px;"></div>
   </div>
   <div class="hud-top">
@@ -171,21 +216,39 @@ const SPAWN_A = new THREE.Vector3(0, EYE_HEIGHT, -13);
 const SPAWN_B = new THREE.Vector3(0, EYE_HEIGHT, 13);
 
 const WEAPON_DEFS = [
-  { key:'sniper',  name:'SNIPER RIFLE', dmg:92, rate:1.35, pellets:1, spread:0.0015, adsSpread:0.0001,
-    viewPos:[0.32,-0.32,-0.75], adsViewPos:[0,-0.20,-0.42], viewRot:[0,Math.PI*0.5,0], adsFov:12, scopeType:'scope' },
-  { key:'shotgun', name:'SHOTGUN', dmg:16, rate:0.85, pellets:9, spread:0.10, adsSpread:0.05,
-    viewPos:[0.32,-0.34,-0.62], adsViewPos:[0,-0.21,-0.40], viewRot:[0,Math.PI*0.5,0], adsFov:46, scopeType:'none' },
-  { key:'mpsd', name:'MPSD', dmg:9, rate:0.11, pellets:1, spread:0.028, adsSpread:0.006,
+  { key:'pistol', name:'PISTOL', unlockLevel:0, dmg:16, rate:0.30, pellets:1, spread:0.020, adsSpread:0.006,
+    viewPos:[0.30,-0.28,-0.52], adsViewPos:[0,-0.17,-0.36], viewRot:[0,Math.PI*0.5,0],
+    adsFov:55, scopeType:'none', magSize:10, reserveSize:70, reloadTime:1.0 },
+  { key:'shotgun', name:'SHOTGUN', unlockLevel:0, dmg:11, rate:0.95, pellets:8, spread:0.12, adsSpread:0.07,
+    viewPos:[0.32,-0.34,-0.62], adsViewPos:[0,-0.21,-0.40], viewRot:[0,Math.PI*0.5,0],
+    adsFov:46, scopeType:'none', magSize:6, reserveSize:36, reloadTime:2.4 },
+  { key:'submachine', name:'SUBMACHINE GUN', unlockLevel:20, dmg:13, rate:0.085, pellets:1, spread:0.030, adsSpread:0.008,
+    viewPos:[0.30,-0.30,-0.55], adsViewPos:[0,-0.19,-0.38], viewRot:[0,Math.PI*0.5,0],
+    adsFov:60, scopeType:'reddot', auto:true, magSize:32, reserveSize:192, reloadTime:1.7 },
+  { key:'mpsd', name:'MPSD', unlockLevel:40, dmg:15, rate:0.10, pellets:1, spread:0.026, adsSpread:0.007,
     viewPos:[0.30,-0.30,-0.55], adsViewPos:[0,-0.19,-0.38], viewRot:[0,0,0],
-    adsFov:62.6, scopeType:'reddot', auto:true, magSize:20, reloadTime:1.6 },
+    adsFov:58, scopeType:'reddot', auto:true, magSize:24, reserveSize:168, reloadTime:1.8 },
+  { key:'sniper', name:'SNIPER RIFLE', unlockLevel:60, dmg:100, rate:1.5, pellets:1, spread:0.0012, adsSpread:0.0001,
+    viewPos:[0.32,-0.32,-0.75], adsViewPos:[0,-0.20,-0.42], viewRot:[0,Math.PI*0.5,0],
+    adsFov:10, scopeType:'scope', magSize:5, reserveSize:25, reloadTime:2.6 },
+  { key:'scarh', name:'SCAR-H', unlockLevel:80, dmg:32, rate:0.14, pellets:1, spread:0.020, adsSpread:0.005,
+    viewPos:[0.30,-0.30,-0.60], adsViewPos:[0,-0.19,-0.38], viewRot:[0,Math.PI*0.5,0],
+    adsFov:50, scopeType:'reddot', auto:true, magSize:28, reserveSize:168, reloadTime:2.1 },
+  { key:'bazooka', name:'BAZOOKA', unlockLevel:100, dmg:180, rate:1.8, pellets:1, spread:0.010, adsSpread:0.004,
+    viewPos:[0.30,-0.34,-0.70], adsViewPos:[0,-0.20,-0.44], viewRot:[0,Math.PI*0.5,0],
+    adsFov:55, scopeType:'none', magSize:1, reserveSize:3, reloadTime:2.9 },
 ];
 
 const MODEL_PATHS = {
-  sniper:  '3D/sniper.glb',
-  shotgun: '3D/shotgun.glb',
-  mpsd:    '3D/mpsd.glb',
-  soldier: '3D/soldier.glb',
-  swat:    '3D/swat.glb',
+  pistol:     '3D/pistol.glb',
+  shotgun:    '3D/shotgun.glb',
+  submachine: '3D/submachine.glb',
+  mpsd:       '3D/mpsd.glb',
+  sniper:     '3D/sniper.glb',
+  scarh:      '3D/scarh.glb',
+  bazooka:    '3D/bazooka.glb',
+  soldier:    '3D/soldier.glb',
+  swat:       '3D/swat.glb',
 };
 
 /* ============================================================
@@ -196,7 +259,8 @@ const UI = {};
  'clickToPlay','dmgNumbers','gameCanvas','hud','crosshair','redDot','scopeOverlay',
  'shieldFill','shieldNumber','hpFill','hpNumber','weaponName','weaponHint','ammoLine',
  'scoreYou','scoreThem','oppLabel','timerLine','killFeed','centerMsg',
- 'quickplayBtn','onlineBtn','exitBtn'
+ 'quickplayBtn','onlineBtn','exitBtn',
+ 'battlePassBtn','battlePassPanel','bpCloseBtn','bpLevelNum','bpGoldNum','bpXpFill','bpXpText','bpTierList','menuLevelBadge'
 ].forEach(id => UI[id] = document.getElementById(id));
 
 /* ============================================================
@@ -374,6 +438,112 @@ function updateTracers(dt){
 }
 
 /* ============================================================
+   BATTLE PASS / PROGRESSION
+   ============================================================ */
+const MAX_LEVEL = 100;
+function xpForLevel(n){ return Math.round(1500 + 35*n + 4*Math.pow(n, 1.6)); }
+function levelFromXp(totalXp){
+  let level = 0, spent = 0;
+  while(level < MAX_LEVEL){
+    const need = xpForLevel(level+1);
+    if(spent + need > totalXp) break;
+    spent += need; level++;
+  }
+  return { level, into: totalXp - spent, need: level < MAX_LEVEL ? xpForLevel(level+1) : 0 };
+}
+function tierReward(n){
+  if(n === MAX_LEVEL) return { type:'weapon', label:'BAZOOKA' };
+  if(n % 20 === 0){
+    const w = WEAPON_DEFS.find(w => w.unlockLevel === n);
+    return { type:'weapon', label: w ? w.name : 'New Weapon' };
+  }
+  return { type:'crate', label:'Gun Crate' };
+}
+let progress = { totalXp: 0, gold: 0 };
+async function loadProgress(){
+  try{
+    const res = await window.storage.get('bp_progress', false);
+    if(res && res.value){ const p = JSON.parse(res.value); if(p) progress = { totalXp:p.totalXp||0, gold:p.gold||0 }; }
+  }catch(e){ /* no saved progress yet */ }
+}
+function saveProgress(){
+  window.storage.set('bp_progress', JSON.stringify(progress), false).catch(()=>{});
+}
+function unlockedWeaponList(){
+  const lvl = levelFromXp(progress.totalXp).level;
+  return WEAPON_DEFS.filter(w => w.unlockLevel <= lvl);
+}
+function awardXp(amount){
+  const before = levelFromXp(progress.totalXp).level;
+  progress.totalXp += amount;
+  const after = levelFromXp(progress.totalXp).level;
+  let rewardMsg = '';
+  for(let lvl = before+1; lvl <= after; lvl++){
+    const r = tierReward(lvl);
+    if(r.type === 'weapon'){
+      rewardMsg += `<br>LEVEL ${lvl}: UNLOCKED ${r.label}`;
+    } else {
+      const gold = 40 + Math.floor(Math.random()*90);
+      progress.gold += gold;
+      rewardMsg += `<br>LEVEL ${lvl}: Gun Crate (+${gold} gold)`;
+    }
+  }
+  saveProgress();
+  refreshLevelBadge();
+  return rewardMsg;
+}
+function refreshLevelBadge(){
+  const lvl = levelFromXp(progress.totalXp).level;
+  UI.menuLevelBadge.innerHTML = `LEVEL <b>${lvl}</b> &middot; ${progress.gold} GOLD`;
+}
+function renderBattlePassPanel(){
+  const info = levelFromXp(progress.totalXp);
+  UI.bpLevelNum.textContent = info.level;
+  UI.bpGoldNum.textContent = progress.gold;
+  const pct = info.level >= MAX_LEVEL ? 100 : Math.min(100, (info.into/info.need)*100);
+  UI.bpXpFill.style.width = pct + '%';
+  UI.bpXpText.textContent = info.level >= MAX_LEVEL ? 'MAX LEVEL REACHED' : `${info.into} / ${info.need} XP to next level`;
+  UI.bpTierList.innerHTML = '';
+  for(let n=1;n<=MAX_LEVEL;n++){
+    const r = tierReward(n);
+    const row = document.createElement('div');
+    row.className = 'bp-tier' + (n>info.level ? ' locked' : '') + (n===info.level+1 ? ' current' : '');
+    row.innerHTML = `<span class="tnum">LV ${n}</span><span class="treward">${r.label}</span><span class="tstate">${n<=info.level?'UNLOCKED':(n===info.level+1?'NEXT':'LOCKED')}</span>`;
+    UI.bpTierList.appendChild(row);
+  }
+}
+UI.battlePassBtn.addEventListener('click', () => {
+  renderBattlePassPanel();
+  UI.menu.classList.add('hidden');
+  UI.battlePassPanel.classList.remove('hidden');
+});
+UI.bpCloseBtn.addEventListener('click', () => {
+  UI.battlePassPanel.classList.add('hidden');
+  UI.menu.classList.remove('hidden');
+});
+
+/* ============================================================
+   AUDIO (lightweight procedural reload sounds — no external files)
+   ============================================================ */
+let audioCtx = null;
+function beep(freq, duration, delay, volume){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = audioCtx.currentTime + (delay||0);
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(volume||0.15, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t0); osc.stop(t0 + duration);
+  }catch(e){}
+}
+function playReloadStartSound(){ beep(220, 0.06, 0, 0.12); beep(180, 0.05, 0.08, 0.10); }
+function playReloadDoneSound(){ beep(340, 0.05, 0, 0.14); beep(520, 0.07, 0.06, 0.14); }
+
+/* ============================================================
    WEAPON VIEW MODEL (player-held)
    ============================================================ */
 let currentWeaponIndex = 0;
@@ -387,20 +557,40 @@ let currentFov = HIP_FOV;
 let lastFireTime = -999;
 let recoilT = 0;
 
+function ammoState(def){
+  if(!weaponAmmo[def.key]) weaponAmmo[def.key] = { mag: def.magSize, reserve: def.reserveSize };
+  return weaponAmmo[def.key];
+}
 function updateAmmoUI(){
   const def = WEAPON_DEFS[currentWeaponIndex];
-  if(!def.magSize){ UI.ammoLine.textContent = ''; return; }
-  UI.ammoLine.textContent = isReloading ? 'RELOADING\u2026' : `${weaponAmmo[def.key] ?? def.magSize} / ${def.magSize}`;
+  const state = ammoState(def);
+  UI.ammoLine.textContent = isReloading ? 'RELOADING\u2026 [R]' : `${state.mag} / ${state.reserve}`;
 }
-function startReload(def){
-  if(!def.magSize) return;
+function tryReload(){
+  if(!gameActive || roundFrozen) return;
+  const def = WEAPON_DEFS[currentWeaponIndex];
+  const state = ammoState(def);
+  if(isReloading || state.mag >= def.magSize || state.reserve <= 0) return;
   isReloading = true;
-  reloadTimer = def.reloadTime || 1.5;
+  reloadTimer = def.reloadTime;
+  playReloadStartSound();
+  updateAmmoUI();
+}
+function finishReload(){
+  const def = WEAPON_DEFS[currentWeaponIndex];
+  const state = ammoState(def);
+  const needed = def.magSize - state.mag;
+  const loaded = Math.min(needed, state.reserve);
+  state.mag += loaded;
+  state.reserve -= loaded;
+  isReloading = false;
+  playReloadDoneSound();
   updateAmmoUI();
 }
 function equipWeapon(index){
   currentWeaponIndex = index;
   const def = WEAPON_DEFS[index];
+  ammoState(def);
   if(weaponViewNode) camera.remove(weaponViewNode);
   weaponViewNode = weaponModels[def.key].clone(true);
   weaponViewNode.position.set(...def.viewPos);
@@ -409,7 +599,6 @@ function equipWeapon(index){
   camera.add(weaponViewNode);
   UI.weaponName.textContent = def.name;
   UI.crosshair.classList.toggle('circle', def.key==='shotgun');
-  if(def.magSize && !(def.key in weaponAmmo)) weaponAmmo[def.key] = def.magSize;
   isReloading = false;
   reloadTimer = 0;
   lastFireTime = -999;
@@ -548,9 +737,12 @@ const keys = {};
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
   if(gameActive){
-    if(e.code==='Digit1') equipWeapon(0);
-    if(e.code==='Digit2') equipWeapon(1);
-    if(e.code==='Digit3') equipWeapon(2);
+    const slot = ['Digit1','Digit2','Digit3','Digit4','Digit5','Digit6','Digit7'].indexOf(e.code);
+    if(slot !== -1){
+      const unlocked = unlockedWeaponList();
+      if(unlocked[slot]) equipWeapon(WEAPON_DEFS.indexOf(unlocked[slot]));
+    }
+    if(e.code==='KeyR') tryReload();
   }
 });
 window.addEventListener('keyup', e => keys[e.code] = false);
@@ -583,8 +775,9 @@ window.addEventListener('mouseup', e => {
    ============================================================ */
 function tryFire(){
   const def = WEAPON_DEFS[currentWeaponIndex];
-  if(isReloading) return;
-  if(def.magSize && (weaponAmmo[def.key] ?? def.magSize) <= 0){ startReload(def); return; }
+  if(isReloading || roundFrozen) return;
+  const state = ammoState(def);
+  if(state.mag <= 0) return;
   const now = performance.now()/1000;
   if(now - lastFireTime < def.rate) return;
   lastFireTime = now;
@@ -628,11 +821,8 @@ function tryFire(){
     }
   }
 
-  if(def.magSize){
-    weaponAmmo[def.key] = (weaponAmmo[def.key] ?? def.magSize) - 1;
-    updateAmmoUI();
-    if(weaponAmmo[def.key] <= 0) startReload(def);
-  }
+  state.mag -= 1;
+  updateAmmoUI();
   if(hits > 0 && opponent){
     const dmg = def.dmg * hits;
     spawnDamageNumber(firstHitPoint, dmg);
@@ -644,7 +834,8 @@ function tryFire(){
 function onOpponentKilled(){
   scoreYou++; updateScoreUI();
   killFeed(gameMode==='online' ? 'You eliminated your opponent' : 'You eliminated the bot');
-  centerMsg('ROUND TO YOU', 1800);
+  centerMsg('ROUND TO YOU <small>+250 XP</small>', 1800);
+  awardXp(250);
   roundFrozen = true;
   if(scoreYou >= WINS_NEEDED){ endMatch(true); return; }
   setTimeout(startRound, 1900);
@@ -669,14 +860,17 @@ function startRound(){
 function endMatch(won){
   gameActive = false;
   document.exitPointerLock();
-  centerMsg((won?'VICTORY':'DEFEAT') + '<small>Returning to menu&hellip;</small>', 2600);
+  const bonus = won ? 500 : 100;
+  const rewardMsg = awardXp(bonus);
+  centerMsg((won?'VICTORY':'DEFEAT') + `<small>+${bonus} XP${rewardMsg}<br>Returning to menu&hellip;</small>`, 3400);
   if(gameMode==='online') teardownNetwork();
   setTimeout(() => {
     UI.hud.classList.add('hidden');
     UI.clickToPlay.classList.add('hidden');
     if(opponent){ opponent.remove(); opponent = null; }
+    refreshLevelBadge();
     UI.menu.classList.remove('hidden');
-  }, 2600);
+  }, 3400);
 }
 
 /* ============================================================
@@ -916,7 +1110,9 @@ function launchMatch(mode){
   gameActive = true;
   roundFrozen = false;
   matchStartTime = performance.now();
-  equipWeapon(0);
+  weaponAmmo = {};
+  const unlocked = unlockedWeaponList();
+  equipWeapon(WEAPON_DEFS.indexOf(unlocked[0]));
   UI.hud.classList.remove('hidden');
   UI.clickToPlay.classList.remove('hidden');
   UI.gameCanvas.requestPointerLock();
@@ -957,7 +1153,7 @@ function animate(){
     if(isLMBDown && pointerLocked && def.auto && !roundFrozen) tryFire();
     if(isReloading){
       reloadTimer -= dt;
-      if(reloadTimer <= 0){ isReloading = false; weaponAmmo[def.key] = def.magSize; updateAmmoUI(); }
+      if(reloadTimer <= 0) finishReload();
     }
 
     const targetFov = isAiming ? (def.adsFov ?? ADS_FOV_DEFAULT) : HIP_FOV;
@@ -968,8 +1164,10 @@ function animate(){
     }
     if(weaponViewNode){
       const targetPos = isAiming ? def.adsViewPos : def.viewPos;
+      const reloadDip = isReloading ? Math.sin(Math.PI * (1 - Math.max(0,reloadTimer)/def.reloadTime)) * 0.16 : 0;
       weaponViewNode.position.x += (targetPos[0]-weaponViewNode.position.x) * Math.min(1,dt*14);
-      weaponViewNode.position.y += (targetPos[1]-weaponViewNode.position.y) * Math.min(1,dt*14);
+      weaponViewNode.position.y += ((targetPos[1]-reloadDip)-weaponViewNode.position.y) * Math.min(1,dt*14);
+      weaponViewNode.rotation.x = reloadDip * 1.4;
       if(recoilT > 0){
         const baseZ = isAiming ? def.adsViewPos[2] : def.viewPos[2];
         weaponViewNode.position.z = baseZ + recoilT*0.08;
@@ -1004,10 +1202,14 @@ function animate(){
 /* ============================================================
    BOOT
    ============================================================ */
-loadAllAssets(p => {
-  UI.loadFill.style.width = (p*100).toFixed(0) + '%';
-  UI.loadText.textContent = p<1 ? `Loading armory\u2026 ${Math.round(p*100)}%` : 'Ready.';
-}).then(() => {
+Promise.all([
+  loadAllAssets(p => {
+    UI.loadFill.style.width = (p*100).toFixed(0) + '%';
+    UI.loadText.textContent = p<1 ? `Loading armory\u2026 ${Math.round(p*100)}%` : 'Ready.';
+  }),
+  loadProgress()
+]).then(() => {
+  refreshLevelBadge();
   setTimeout(() => { UI.loadingScreen.classList.add('hidden'); UI.menu.classList.remove('hidden'); }, 250);
   animate();
 }).catch(err => {
