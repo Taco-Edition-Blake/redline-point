@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REDLINE POINT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="loadingScreen">
+  <div class="brand" style="margin-bottom:0;">
+    <p class="eyebrow">FIELD OPS</p>
+    <h1>REDLINE<span>&middot;</span>POINT</h1>
+  </div>
+  <div class="bar"><div class="fill" id="loadFill"></div></div>
+  <p id="loadText">Loading armory&hellip;</p>
+</div>
+
+<div id="menu" class="hidden">
+  <div class="brand">
+    <p class="eyebrow">FIELD OPS &mdash; 1V1 ARENA</p>
+    <h1>REDLINE<span>&middot;</span>POINT</h1>
+    <p class="tag">Small arena. Seven guns. One winner. Pick a mode.</p>
+    <div class="level-badge" id="menuLevelBadge">LEVEL <b>1</b> &middot; 0 GOLD</div>
+  </div>
+  <div class="menu-buttons">
+    <button class="menu-btn" id="quickplayBtn"><span>QUICKPLAY<span class="sub">1v1 against a bot, right now</span></span><span class="arrow">&#8594;</span></button>
+    <button class="menu-btn" id="onlineBtn"><span>ONLINE<span class="sub">Matched against another real player</span></span><span class="arrow">&#8594;</span></button>
+    <button class="menu-btn" id="battlePassBtn"><span>BATTLE PASS<span class="sub">100 tiers &middot; unlock every gun</span></span><span class="arrow">&#8594;</span></button>
+    <button class="menu-btn" id="exitBtn"><span>EXIT<span class="sub">Close the app</span></span><span class="arrow">&#8594;</span></button>
+  </div>
+  <p class="credits">Models: Quaternius, austincford, madtrollstudio, Zsky, Kristian M, Jex Merrill</p>
+</div>
+
+<div id="battlePassPanel" class="hidden">
+  <h2>BATTLE PASS</h2>
+  <p class="bp-sub">Play matches to earn XP. Every level grants a Gun Crate &mdash; every 20th level guarantees a new weapon.</p>
+  <div class="bp-stats">
+    <div class="bp-stat"><div class="num" id="bpLevelNum">1</div><div class="lbl">LEVEL</div></div>
+    <div class="bp-stat"><div class="num" id="bpGoldNum">0</div><div class="lbl">GOLD</div></div>
+  </div>
+  <div class="bp-xp-wrap">
+    <div class="bp-xp-bar"><div class="bp-xp-fill" id="bpXpFill"></div></div>
+    <div class="bp-xp-text" id="bpXpText">0 / 1500 XP to next level</div>
+  </div>
+  <div class="bp-tiers" id="bpTierList"></div>
+  <button id="bpCloseBtn">BACK</button>
+</div>
+
+<div id="searchPanel" class="hidden">
+  <div class="pulse-dot"></div>
+  <h2>SEARCHING FOR AN OPPONENT</h2>
+  <p id="searchStatus">Looking for another player who has this page open&hellip;</p>
+  <button id="cancelSearch">CANCEL</button>
+</div>
+
+<div id="clickToPlay" class="hidden"><div>CLICK TO ENTER THE ARENA</div></div>
+<div id="dmgNumbers"></div>
+<canvas id="gameCanvas"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="crosshair"></div>
+  <div id="redDot"></div>
+  <div id="scopeOverlay"><div class="scope-hole"><div class="scope-ring"></div></div></div>
+  <div class="hud-bl">
+    <div class="hp-label">SHIELD <b id="shieldNumber">100</b></div>
+    <div class="hp-bar"><div class="shield-fill" id="shieldFill"></div></div>
+    <div class="hp-label" style="margin-top:8px;">HEALTH <b id="hpNumber">100</b></div>
+    <div class="hp-bar"><div class="hp-fill" id="hpFill"></div></div>
+  </div>
+  <div class="hud-br">
+    <div class="weapon-name" id="weaponName">SNIPER RIFLE</div>
+    <div class="weapon-hint" id="weaponHint">1-7 switch &middot; R reload &middot; LMB fire &middot; RMB aim &middot; Space jump &middot; Shift sprint</div>
+    <div class="weapon-hint" id="ammoLine" style="margin-top:4px;"></div>
+  </div>
+  <div class="hud-top">
+    <div class="score-line">YOU <span id="scoreYou">0</span> &nbsp;&mdash;&nbsp; <span id="scoreThem">0</span> <span id="oppLabel">BOT</span></div>
+    <div id="timerLine"></div>
+  </div>
+  <div id="killFeed"></div>
+  <div id="centerMsg"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/battlepass.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/player.js"></script>
+<script src="js/online.js"></script>
+<script src="js/quickplay.js"></script>
+</body>
+</html>
